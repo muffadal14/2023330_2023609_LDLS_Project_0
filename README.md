@@ -96,6 +96,7 @@ it cannot drift from either. Regenerate it after any run.
 | `results/run_experiments.txt` | the raw console output of the last experiment run |
 | `results/batch_equivalence.txt` | the raw output of the batch-equivalence test |
 | `results/experiments.json` | the same results, machine readable |
+| `results/project_0_slide.pdf` | a comprehensive slide |
 
 All of them are generated, never hand-edited, so they cannot drift from the
 code:
@@ -150,23 +151,3 @@ it the isolation results would pass trivially.
 8) for the timings. At one thread the logits are bit-identical when the context
 is the same, which makes the result a statement about masking rather than about
 floating point.
-
-## Known limitations
-
-* **The parser is hand-written rather than built on a LaTeX library.** That
-  is a deliberate choice: the repository already contained a scanner that
-  tracked source spans, classified theorem environments from `\newtheorem`,
-  audited for lost control sequences and had a large test suite. One case it
-  does not handle is LaTeX that puts `\title` and `\author` *inside*
-  `\begin{document}`; the title is read from the preamble, as the corpus does
-  it.
-* **Cross-references are grouped by cited block at gather time**, not by
-  giving a citing token a second sequence. The second approach was implemented
-  first and is wrong: llama.cpp rejects a sequence whose positions are not
-  contiguous, and a citing node usually sits in the middle of another block's
-  range. The parser now records the links in
-  `metadata.sequence_assignment.cross_references` and the driver pulls the
-  cited block into the answer sequence.
-* **The five corpus documents exercise neither path.** They contain no
-  resolvable cross-reference and no section small enough to merge, so
-  `tests/test_fixture_paths.py` drives both against a small fixture.
