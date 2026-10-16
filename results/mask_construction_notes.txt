@@ -1,0 +1,240 @@
+Mask construction from sequence IDs
+====================================
+
+This is the write-up of the reading the project asked for: what `llama.h`
+exposes, how `examples/batched` uses it, and how a sequence id turns into an
+attention mask.  Every claim below names the file and line it came from, in
+the llama.cpp checkout at commit 711780ffc.
+
+All paths are relative to `llama.cpp/`.
+
+
+1. What the public API says
+---------------------------
+
+`include/llama.h`
+
+  * `typedef int32_t llama_seq_id;` - a sequence is just an integer.
+  * `llama_context_params.n_seq_max` (line 370) - "max number of sequences
+    (i.e. distinct states for recurrent models)".
+  * `llama_context_params.kv_unified` (line 415) - "use a unified buffer across
+    the input sequences when computing the attention".
+  * `llama_batch_init(..., int32_t n_seq_max)` (line 976) and the comment at
+    line 970: "Each token can be assigned up to n_seq_max sequence ids".
+  * `llama_memory_seq_rm(mem, seq_id, p0, p1)` (line 764) - "Removes all
+    tokens that belong to the specified sequence and have positions in
+    [p0, p1)".  Note the two conditions: a sequence *and* a position range.
+  * `llama_memory_seq_cp`, `llama_memory_seq_pos_min`, `llama_memory_seq_pos_max`.
+
+So the API is built around one idea: the cache is a set of cells, and each
+cell records which sequences it belongs to and what position it holds.  A
+sequence is not a container; it is a label.  That matters for the rest of this
+document, and for the constraint in section 6.
+
+
+2. What the batched example does
+--------------------------------
+
+`examples/batched/batched.cpp` is the intended demonstration.  Two parts
+matter.
+
+Prefill (lines 122-130):
+
+    std::vector<llama_seq_id> seq_ids(n_parallel, 0);
+    for (int32_t i = 0; i < n_parallel; ++i) {
+        seq_ids[i] = i;
+    }
+    for (size_t i = 0; i < tokens_list.size(); ++i) {
+        batch.add(tokens_list[i], i, seq_ids, false);
+    }
+
+One prompt, given to every sequence at once, using the overload that takes a
+whole `seq_ids` vector.  The prompt is therefore visible to all streams, which
+is how the example makes `n_parallel` independent continuations of one shared
+prompt.
+
+Generation (line 214):
+
+    batch.add(new_token_id, n_cur, i, true);
+
+Each generated token goes to exactly one sequence, with the scalar overload.
+
+The example also carries this in its README:
+
+    ./llama-batched -m ./models/llama-7b-v2/ggml-model-f16.gguf -p "Hello my name is" -np 4 --kv-unified
+
+The `--kv-unified` flag is not incidental; section 4 explains why it is
+required.  Running without it fails immediately:
+
+    E split_equal: sequential split is not supported when there are coupled
+      sequences in the input batch (you may need to use the -kvu flag)
+
+(`src/llama-batch.cpp:621`)
+
+
+3. How a sequence id becomes a mask
+----------------------------------
+
+`src/llama-batch.cpp` turns a batch into ubatches.  Around line 249 it
+"determine[s] coupled sequences" by taking, for every token, the first and
+last sequence id:
+
+    const llama_seq_id s0 = batch.seq_id[i][0];
+    for (int32_t s = 0; s < batch.n_seq_id[i]; ++s) {
+        const llama_seq_id s1 = batch.seq_id[i][s];
+        ...
+        seq_id_unq.push_back(s);
+
+A token that lists more than one sequence is "coupled": the batch cannot be
+split cleanly between them, because such a token must land in every group.
+
+The mask itself is built in `src/llama-kv-cache.cpp`, in
+`set_input_kq_mask_impl`.  Two lines carry the whole mechanism:
+
+    // line 1594 / 1607
+    const llama_seq_id seq_id = ubatch->seq_id[i][0];
+
+    // line 1665-1667
+    // mask the token if not the same sequence
+    if (!cells.seq_has(j, seq_id)) {
+        goto skip;                       // -> mask_drop = -INFINITY
+
+    // line 1681-1685
+    if (causal) {
+        if (p0 > p1) {                   // mask future tokens
+            goto skip;
+
+`mask_keep` is 0.0f and `mask_drop` is -INFINITY.  So:
+
+  a query token sees exactly the cells that (a) carry its own sequence id and
+  (b) sit at or before its position.  Nothing else is visible.
+
+Two consequences follow directly:
+
+  * The sequence ids *are* the attention mask.  There is no separate mask
+    tensor to build or pass in; grouping tokens by sequence id is sufficient.
+  * Only `seq_id[i][0]`, the first one, drives the mask for the cell write.
+    The remaining ids affect grouping, not this test.
+
+For our use the causal test is not a constraint.  Our blocks each occupy a
+contiguous range of packed positions and are prefilled in document order, so
+the `p0 > p1` branch never removes a cell we need.
+
+
+4. Why the unified buffer is required
+------------------------------------
+
+`src/llama-graph.cpp:37` and `:56`:
+
+    const auto n_stream = cparams.kv_unified ? 1 : ubatch.n_seqs_unq;
+
+With `kv_unified` off, each distinct sequence gets its own cache stream and its
+own attention computation.  That is cheaper for unrelated sequences, and it is
+what mode `two-prompts` uses.
+
+With `kv_unified` on, all sequences share one stream and one attention
+computation, and the mask does the separating.  This is required as soon as a
+batch contains a coupled token, which is exactly the case when one prompt is
+submitted to several sequences - the `examples/batched` prefill.  Hence the
+`--kv-unified` in its README.
+
+
+5. The two constraints that shaped the design
+---------------------------------------------
+
+(a) A token may list several sequence ids, but the batch must then be
+    processed with a unified buffer.  Our tokens list exactly one, so the
+    document modes could in principle avoid the unified buffer; they still use
+    it, because `gather_context()` copies whole blocks with
+    `llama_memory_seq_cp` and that call needs a single full buffer:
+
+        GGML_ASSERT(is_full && "seq_cp() is only supported for full KV buffers")
+
+(b) A sequence's positions must be contiguous.  `src/llama-batch.cpp:422`:
+
+        LLAMA_LOG_ERROR("%s: sequence %d positions are not continuous\n", __func__, s);
+
+    This is a hard refusal, not a warning.  It is what makes the obvious
+    cross-reference implementation impossible - see section 6.
+
+`LLAMA_MAX_SEQ` is 256 (`src/llama-cparams.h:8`), enforced at
+`src/llama-context.cpp:187`.  The merge rule in the parser exists to stay under
+a much smaller practical budget: one sequence per section is 7-14 for the
+corpus, well inside the limit, but a paper with hundreds of short sections
+would need merging.
+
+
+6. The cross-reference constraint, and the bug it caused
+--------------------------------------------------------
+
+The natural reading of "group by cited block" is: a node that cites a label
+owned by another block gets that block's sequence id as well, so it can attend
+across.  Implemented that way, every token belongs to at most two sequences
+and the mask code above is unchanged.
+
+It does not work.  A citing node usually sits in the *middle* of the citing
+block's position range, so the cited sequence's positions become
+{its own block} interleaved with {the citing node}.  Constraint (b) then
+refuses the prefill:
+
+    E init: sequence 2 positions are not continuous
+    E decode: failed to initialize batch
+
+This is worth recording because nothing in the five-document corpus reaches
+it: the corpus contains no `\label` at all, and its single `\ref` sits inside
+`\verb|...|`, which is literal example text rather than a reference.  The
+feature had unit tests and zero integration coverage.
+
+What is there now:
+
+  * The parser records the link in
+    `metadata.sequence_assignment.cross_references` and leaves `seq_ids`
+    single-valued.
+  * `validate_tree()` rejects a non-contiguous sequence, so the invariant is
+    enforced at the point where it is created.
+  * The driver resolves the link in `gather_context()`: answering from block X
+    also copies in the blocks X cites.  `--no-follow-xrefs` turns it off.
+  * `tests/test_fixture_paths.py` drives it against a fixture, and the
+    recorded result is in `results/test_audit.txt` PART 8.
+
+
+7. What the driver does with this
+----------------------------------
+
+Per document, in `driver/latex_driver.cpp`:
+
+  1. `prefill_document` submits every token with its own block's seq_id and its
+     packed position.  The mask built in section 3 then confines each block to
+     itself.
+  2. `gather_context` copies the wanted blocks into a scratch sequence
+     (the highest seq_id).  This is needed because a sequence's positions must
+     stay consecutive (constraint b) and the blocks end at different
+     positions, so a question cannot simply join them.
+  3. The question and the generated answer continue in the scratch sequence.
+  4. `evict_block` is one call, because a block is both one sequence and one
+     contiguous position range:
+
+         llama_memory_seq_rm(llama_get_memory(ctx), seq_id, pos_min, pos_max + 1);
+
+     The parser's guarantee that a block owns exactly that range is what makes
+     a single call sufficient.  `metadata.sequence_assignment.blocks` records
+     it so the driver never has to recompute it.
+
+Measured consequences are in `results/slide.md` and `results/test_audit.txt`.
+
+
+8. The measurement caveat this reading produced
+------------------------------------------------
+
+Section 3 says the mask is exact, and it is.  But an eviction frees cells, and
+the attention kernel's reduction order depends on which cells exist.  Removing
+cells can therefore change a greedy token choice without changing what the
+model attended to.  Measured, on `document_1_transformer_architecture`:
+
+  * evicting an unrelated block, 8 threads: max logit shift 1.3062
+  * the same, 1 thread:               max logit shift 0.0000
+  * evicting the block the answer comes from: max logit shift 9.8917
+
+So text equality is not a sufficient test on CPU, which is why the harness
+compares top logits and runs the isolation comparisons single threaded.  See
+`README.md`, "Two things worth knowing about the measurements".

@@ -1,0 +1,103 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,booktabs}
+\title{Attention Masks, Sequence Identifiers, and Batched Inference}
+\author{Sample Research Group}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Attention masks determine which token positions may contribute to each other during Transformer inference. When independent prompts are processed in a shared batch, sequence membership and position handling must prevent unintended interactions. This document introduces a simplified mask formulation and outlines tests for a batched inference implementation.
+\end{abstract}
+
+\section{Attention Scores}
+Let $Q\in\mathbb{R}^{n_q\times d_k}$ and $K\in\mathbb{R}^{n_k\times d_k}$ be query and key matrices. The scaled attention scores are
+\begin{equation}
+S=\frac{QK^\top}{\sqrt{d_k}}.
+\end{equation}
+The score at row $i$ and column $j$ measures compatibility between query position $i$ and key position $j$. The softmax transforms the allowed scores into weights used to combine value vectors.
+
+A mask $M$ modifies the scores before softmax:
+\begin{equation}
+A=\operatorname{softmax}(S+M).
+\end{equation}
+A disallowed position is commonly represented by a sufficiently large negative score so that its softmax weight is effectively zero. The exact implementation may use another representation that has the same effect.
+
+\section{Causal Visibility}
+For autoregressive generation, a token must not attend to future positions in the same sequence. If positions are numbered from zero, a simple causal condition allows key position $j$ for query position $i$ only when $j\leq i$.
+
+\begin{equation}
+M_{ij}=
+\begin{cases}
+0, & j\leq i,\\
+-\infty, & j>i.
+\end{cases}
+\end{equation}
+This equation is a simplified description. Actual inference engines may use triangular kernels, position metadata, or other optimized representations instead of materializing a dense mask.
+
+\section{Independent Sequences}
+Suppose each token $i$ is associated with a sequence identifier $s_i$. A conceptual isolation rule permits attention only when query and key belong to the same sequence and satisfy the causal condition:
+\begin{equation}
+M_{ij}=
+\begin{cases}
+0, & s_i=s_j\ \text{and}\ p_j\leq p_i,\\
+-\infty, & \text{otherwise},
+\end{cases}
+\end{equation}
+where $p_i$ is the token's position within its sequence. This is a teaching model, not a claim about the exact internal implementation of any particular version of \texttt{llama.cpp}.
+
+Sequence identifiers and positions serve different purposes. An identifier distinguishes logical sequences, while a position describes where a token lies within its sequence. Two independent sequences can both have a token at position zero. Therefore, a cache operation that targets positions should also account for sequence membership.
+
+\subsection{Structured Nodes Are Not Automatically Isolated}
+A document tree may contain a heading and several paragraphs. Assigning each node a different sequence ID can make the nodes independent, but it may also prevent a question from attending to the content it needs. Parent-child relationships in JSON do not automatically create attention relationships inside the model.
+
+A driver must define the intended visibility policy. For example, it might preserve one sequence for the relevant document context, or explicitly assemble the selected subtree and its dependencies into a prompt. The chosen design should be documented and tested.
+
+\section{Batched and Separate Runs}
+A baseline test uses two independent prompts, A and B. First, each prompt is run separately. Then both prompts are submitted through the batched interface. The outputs are compared under equivalent model, tokenization, position, and decoding settings.
+
+Greedy decoding reduces variation from sampling, although backend differences or changes in numerical execution may still cause discrepancies. A mismatch should prompt investigation of sequence metadata, position assignments, batch construction, and cache state rather than being dismissed.
+
+\section{Subtree Mutation Test}
+Construct a document with a relevant subtree A and an unrelated subtree B. Ask a fixed question about A and record the answer. Change only the content of B, then repeat the question under the same inference settings. If B is genuinely outside the information path used to answer the question, the answer should remain stable.
+
+This test should be paired with an eviction test. After prefill, remove the cached entries associated with B using the supported API, then ask the same question about A. The driver must ensure that the question and retained context are still presented in a valid way. If it reconstructs a prompt or recomputes state after eviction, that work should be recorded so the result is interpreted correctly.
+
+\section{Memory and Timing}
+Record active cache occupancy before and after eviction, along with allocated capacity if it is exposed by the runtime. Also measure prefill time, generation time, and eviction time. Use repeated runs and report the method used to calculate summary timings.
+
+A smaller active cache does not necessarily mean the process has returned physical memory to the operating system. The runtime may reserve buffers for reuse. Reporting both active entries and allocated capacity avoids conflating logical eviction with memory deallocation.
+
+\section{Conclusion}
+Sequence-aware attention is necessary for processing independent prompts together. Correct subtree experiments require more than assigning IDs: the visibility policy, token positions, cache ownership, and question context must all be consistent. The batched-versus-separate baseline and the mutation and eviction tests provide complementary checks of the implementation.
+
+
+\section{Positions During Prefill}
+During prefill, the model processes the prompt tokens and computes cache entries for the relevant layers. Positions typically describe token order within a sequence, but the exact convention depends on the runtime and model architecture. A position should not be inferred from the node's depth in the document tree. A heading can be at tree depth two while its tokens occur much later in the linearized input.
+
+If a document is split into logical sequences, the implementation must decide how positions are assigned and how the question is connected to the retained content. Resetting positions for each sequence may be appropriate for independent sequences, but the model's position encoding and the inference library's batching rules must be respected. A correct-looking JSON file is not enough to establish that the runtime interpreted the batch as intended.
+
+\subsection{Batch Construction}
+A batch may contain tokens from more than one sequence. Each token record must carry the metadata expected by the API, including its token ID, position, and sequence membership. The batch size is not necessarily the same as the number of logical sequences. One sequence can contribute many tokens, and a single batch can contain tokens from several sequences.
+
+The team should first reproduce the library's batched example with two independent prompts. Only after that baseline works should the driver introduce document-tree metadata. This staged approach makes it easier to isolate bugs: a failure in the baseline points to batch construction or inference settings, while a failure introduced later may arise from the parser or subtree policy.
+
+\section{Interpreting the Mutation Test}
+Let $A$ denote the subtree containing the answer to a fixed question and let $B$ denote an unrelated subtree. The mutation experiment changes the text in $B$ while leaving $A$ and the question unchanged. If the output changes, possible explanations include unintended attention, changed prompt layout, altered positions, sampling variation, or a genuine dependency that the team overlooked.
+
+For this reason, the experiment should record the full prompt construction and metadata before and after mutation. If changing B changes the number of tokens, the positions of later nodes may shift under a flattened sequence convention. The test should either control for that shift or explicitly treat it as part of the intervention. Otherwise, it may be impossible to determine whether the changed answer arose from content or from position changes.
+
+\section{Interpreting the Eviction Test}
+Eviction removes cached state after prefill. It is not equivalent to editing the original document and running prefill again. If the driver changes the prompt after eviction, it may need to rebuild positions, recompute retained state, or restart a sequence. Those actions can be valid, but the measurement must state which operations occurred.
+
+A robust test checks that the intended entries were removed, that retained entries remain valid, and that the answer is still supported by the available context. A cache API may clear a range of positions for one sequence, so the driver should verify the selected sequence ID and interval. The team should never assume that deleting a JSON subtree automatically evicts the corresponding model cache.
+
+\section{Reproducibility}
+Each test record should include the model file and quantization, repository revision, CPU configuration, context parameters, prompt text, question, decoding settings, and token counts. For timing, note whether model loading is included. Use the same warm-up procedure and repeat measurements enough times to avoid relying on a single noisy run.
+
+The results slide should distinguish a passed correctness check from a measured performance benefit. It is possible for answers to remain unchanged while eviction takes additional time or while reserved memory remains constant. Such a result is still informative: it indicates that correctness was preserved under the tested conditions, but the expected memory or latency benefit was not demonstrated.
+
+\section{Conclusion}
+Attention masks, sequence IDs, and positions jointly determine which information can influence a token. The implementation must verify their behavior rather than infer it from the document tree alone. Baseline batching, controlled mutation, and explicit eviction measurements provide complementary evidence about the correctness and usefulness of structured context management.
+
+\end{document}

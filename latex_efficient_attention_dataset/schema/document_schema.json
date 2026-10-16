@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "document_schema.json",
+  "title": "Structured LaTeX Document",
+  "description": "Node tree produced by parser/parse_latex.py. Every node owns only its own text; descendant text is never copied into ancestors, so each token is assigned to exactly one node. 'text' is a deterministic meaning-preserving linear rendering of 'latex': grouping braces are retained so subscripts, superscripts and grouping stay explicit, and any control sequence without a documented Unicode equivalent is preserved verbatim and reported in metadata.unresolved_commands.",
+  "type": "object",
+  "required": [
+    "document_id",
+    "title",
+    "metadata",
+    "nodes"
+  ],
+  "properties": {
+    "document_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "description": "Self-describing provenance, tokenization and fidelity information.",
+      "required": [
+        "schema_version",
+        "source_file",
+        "node_count",
+        "tokenization",
+        "position_convention",
+        "sequence_convention"
+      ],
+      "properties": {
+        "schema_version": { "type": "string" },
+        "source_file": { "type": "string" },
+        "source_length": { "type": "integer", "minimum": 0 },
+        "node_count": { "type": "integer", "minimum": 1 },
+        "nonempty_node_count": { "type": "integer", "minimum": 0 },
+        "node_type_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "tokenization": {
+          "type": "object",
+          "description": "Exactly how tokens, positions and seq_ids were produced.",
+          "required": ["kind", "model_file", "granularity", "add_bos", "special", "total_tokens"],
+          "properties": {
+            "kind": { "type": "string" },
+            "model_file": { "type": "string" },
+            "model_file_name": { "type": "string" },
+            "vocab_size": { "type": "integer", "minimum": 1 },
+            "granularity": { "type": "string", "enum": ["per_node", "per_document"] },
+            "input_field": { "type": "string", "enum": ["text", "latex"] },
+            "add_bos": { "type": "boolean" },
+            "special": { "type": "boolean" },
+            "total_tokens": { "type": "integer", "minimum": 0 },
+            "note": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "position_convention": {
+          "type": "string",
+          "description": "packed_global = 0-based, contiguous and packed over the flattened pre-order node list."
+        },
+        "sequence_convention": { "type": "string" },
+        "sequence_assignment": {
+          "type": "object",
+          "description": "How seq_ids were distributed. mode 'single' puts every token in sequence 0. mode 'blocks' gives every top-level block its own sequence and lists each sequence in 'blocks', including its packed position range, so a caller can evict it with a single seq+position removal. 'cross_references' records the approximation used for \\ref/\\cite: a caller that answers from 'from_seq' should also make 'target_seq' visible, because the two blocks refer to each other.",
+          "required": ["mode", "sequence_count", "blocks"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["single", "blocks"] },
+            "sequence_count": { "type": "integer", "minimum": 1 },
+            "max_sequences": { "type": "integer" },
+            "min_block_tokens": { "type": "integer" },
+            "xref_links": { "type": "boolean" },
+            "cross_references": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["from_node", "from_seq", "target_node", "target_seq", "label"],
+                "properties": {
+                  "from_node": { "type": "string" },
+                  "from_seq": { "type": "integer", "minimum": 0 },
+                  "target_node": { "type": "string" },
+                  "target_seq": { "type": "integer", "minimum": 0 },
+                  "label": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "blocks": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "description": "One llama.cpp sequence. pos_min/pos_max is the packed position range this sequence owns; node_ids are the top-level block nodes that were merged into it.",
+                "required": ["seq_id", "node_ids", "token_count", "pos_min", "pos_max"],
+                "properties": {
+                  "seq_id": { "type": "integer", "minimum": 0 },
+                  "node_ids": { "type": "array", "items": { "type": "string" } },
+                  "title": { "type": "string" },
+                  "node_count": { "type": "integer", "minimum": 0 },
+                  "token_count": { "type": "integer", "minimum": 0 },
+                  "pos_min": { "type": "integer" },
+                  "pos_max": { "type": "integer" },
+                  "merged": { "type": "boolean" }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "ownership_convention": { "type": "string" },
+        "text_convention": { "type": "string" },
+        "dropped_content_free_commands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Content-free commands that the renderer removed, from the documented allow-list."
+        },
+        "unresolved_commands": {
+          "type": "object",
+          "required": ["count", "commands"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "commands": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "content_loss_audit": {
+          "type": "object",
+          "description": "Result of re-scanning the source for control sequences absent from the output.",
+          "properties": {
+            "lost": { "type": "array", "items": { "type": "string" } },
+            "invented": { "type": "array", "items": { "type": "string" } },
+            "dropped": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "node_type",
+        "parent",
+        "text",
+        "latex",
+        "tokens",
+        "positions",
+        "seq_ids",
+        "token_count",
+        "source_span",
+        "child_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "node_type": {
+          "type": "string",
+          "enum": [
+            "document",
+            "abstract",
+            "section",
+            "subsection",
+            "subsubsection",
+            "paragraph",
+            "equation",
+            "align",
+            "cases",
+            "theorem",
+            "proposition",
+            "lemma",
+            "corollary",
+            "conjecture",
+            "claim",
+            "remark",
+            "example",
+            "definition",
+            "proof",
+            "figure",
+            "table",
+            "item",
+            "itemize",
+            "enumerate",
+            "description",
+            "algorithm",
+            "algorithmic",
+            "other"
+          ]
+        },
+        "parent": {
+          "type": ["string", "null"]
+        },
+        "is_heading": {
+          "type": "boolean",
+          "description": "True for nodes created by a sectioning command (\\section, \\subsection, \\subsubsection, \\paragraph). Distinguishes a \\paragraph heading from a text paragraph, since both map to node_type 'paragraph'."
+        },
+        "environment": {
+          "type": "string",
+          "description": "Original LaTeX environment name, preserved for every environment node."
+        },
+        "text": {
+          "type": "string",
+          "description": "Meaning-preserving rendering of 'latex'."
+        },
+        "latex": {
+          "type": "string",
+          "description": "Verbatim LaTeX owned by this node (own text runs only)."
+        },
+        "caption": {
+          "type": "string",
+          "description": "Rendered \\caption{...} argument, when present."
+        },
+        "tokens": {
+          "type": "array",
+          "description": "Model-tokenizer token IDs produced from 'text'.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "positions": {
+          "type": "array",
+          "description": "0-based packed positions over the pre-order node list.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "seq_ids": {
+          "type": "array",
+          "description": "Logical sequence identifier per token. Under the single-sequence convention every entry is 0; under the block convention every token carries its own block's seq_id. A token always belongs to exactly one sequence, and each sequence's positions are contiguous, because llama.cpp rejects a sequence with a gap. Cross-references are described by metadata.sequence_assignment.cross_references rather than by extra memberships.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "token_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "type": "array",
+          "description": "[start, end) character offsets into the original .tex file.",
+          "items": { "type": "integer", "minimum": 0 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "child_ids": {
+          "type": "array",
+          "description": "Child node ids in source order.",
+          "items": { "type": "string" }
+        },
+        "labels": {
+          "type": "array",
+          "description": "\\label{...} keys owned by this node.",
+          "items": { "type": "string" }
+        },
+        "references": {
+          "type": "array",
+          "description": "\\ref{...}/\\cite{...} keys referenced by this node.",
+          "items": { "type": "string" }
+        },
+        "extra_seq_ids": {
+          "type": "array",
+          "description": "Deprecated and no longer emitted. Joining a token to a second sequence was found to break llama.cpp's requirement that a sequence's positions be contiguous; cross-references are now recorded in metadata.sequence_assignment.cross_references instead.",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "unresolved_commands": {
+          "type": "array",
+          "description": "Control sequences in this node's text with no documented rendering; preserved verbatim.",
+          "items": { "type": "string" }
+        },
+        "merged_from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

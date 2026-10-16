@@ -1,0 +1,23 @@
+=== llama-batched, one prompt shared by two sequences ===
+  (the upstream example samples stochastically, so this section changes on every run; only the independence property is being checked here, not the exact text)
+  seq 0 -> "Hello my name is Samantha I'm a 30 year old married and a"
+  seq 1 -> "Hello my name is Aisha, I'm a huge fan of the movie"
+  the two sequences diverge, so they are independent
+
+=== driver two-prompts, two different prompts ===
+  seq 0 prompt 'Hello my name is'
+    batched -> ' Emily and I am a huge fan of your work. I recently came across your'
+    single  -> ' Emily and I am a huge fan of your work. I recently came across your'
+  seq 1 prompt 'The capital of France is'
+    batched -> ' Paris. The capital of France is Paris. The capital of France is Paris.'
+    single  -> ' Paris. The capital of France is Paris. The capital of France is Paris.'
+  seq 0: MATCH
+  seq 1: MATCH
+
+=== one prefill batch instead of two ===
+  seq 0 separate -> ' Emily and I am a huge fan of your work. I recently came across your'
+  seq 0 joint    -> ' Emily and I am a huge fan of your work. I recently came across your'
+  max logit shift between the two prefill splits: 0.2699
+  a joint prefill moves the logits by more than 0.25, so the split of the prefill is part of the comparison, not the mask
+
+every batched run matched the corresponding separate runs

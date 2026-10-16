@@ -1,0 +1,844 @@
+{
+  "documents": [
+    {
+      "document": "document_1_transformer_architecture",
+      "focus": 1,
+      "target": 3,
+      "question": "What does the attention mechanism compare?",
+      "tree": {
+        "nodes": 39,
+        "tokens": 1324,
+        "depth": 4,
+        "blocks": 10,
+        "min_subtree": 54,
+        "max_subtree": 1324,
+        "mean_subtree": 242.25,
+        "structural_types": [
+          "abstract",
+          "align",
+          "equation",
+          "section",
+          "subsection"
+        ],
+        "structural_nodes": 15,
+        "type_counts": {
+          "abstract": 1,
+          "align": 1,
+          "document": 1,
+          "equation": 3,
+          "paragraph": 22,
+          "section": 8,
+          "subsection": 3
+        }
+      },
+      "markup_tokens": 65,
+      "markup_share": 0.04909365558912387,
+      "baseline_answer": "The paper discusses the computational costs of attention mechanisms and proposes a new approach to efficient attention, which is based on a novel3.06.515.494 I main: mode=ask focus=1 decoded=24 state=42.39 MiB",
+      "baseline_wall_s": 187.53745980001986,
+      "baseline_log": {
+        "answers": [],
+        "kv_before_mib": 41.39,
+        "kv_after_mib": null,
+        "unchanged": null,
+        "cells_removed": null,
+        "prefill_s": 174.59,
+        "ask_s": null,
+        "current": "baseline"
+      },
+      "baseline_logits": [
+        [
+          578,
+          15.331565
+        ],
+        [
+          5684,
+          14.168026
+        ],
+        [
+          35434,
+          17.84346
+        ],
+        [
+          279,
+          18.14282
+        ],
+        [
+          55580,
+          14.494829
+        ],
+        [
+          7194,
+          21.02948
+        ],
+        [
+          315,
+          22.187618
+        ],
+        [
+          6666,
+          17.21382
+        ],
+        [
+          24717,
+          20.574238
+        ],
+        [
+          323,
+          20.836258
+        ],
+        [
+          55725,
+          18.699074
+        ],
+        [
+          264,
+          19.595636
+        ],
+        [
+          502,
+          17.948334
+        ],
+        [
+          5603,
+          18.433113
+        ],
+        [
+          311,
+          21.399998
+        ],
+        [
+          11297,
+          17.125462
+        ],
+        [
+          6666,
+          20.7201
+        ],
+        [
+          11,
+          18.379084
+        ],
+        [
+          902,
+          16.926472
+        ],
+        [
+          374,
+          18.407412
+        ],
+        [
+          3196,
+          17.931711
+        ],
+        [
+          389,
+          26.379065
+        ],
+        [
+          264,
+          16.610392
+        ],
+        [
+          11775,
+          16.931871
+        ]
+      ],
+      "replace_wall_s": 203.06052340008318,
+      "replace_kv_before": 41.39,
+      "replace_kv_after": 30.54,
+      "replace_answer": "The paper discusses the computational costs of attention mechanisms and proposes a new approach to efficient attention, which is based on a novel3.22.013.105 I main: unchanged = yes3.22.013.556 I main: mode=replace focus=1 decoded=24 state=31.89 MiB",
+      "replace": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_wall_s": 210.05777680012397,
+      "evict_cells_removed": 379,
+      "evict": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_kv_before": 41.39,
+      "evict_kv_after": 30.54,
+      "evict_answer": "The paper discusses the computational costs of attention mechanisms and proposes a new approach to efficient attention, which is based on a novel3.29.114.509 I main: unchanged = yes3.29.115.251 I main: mode=evict focus=1 decoded=24 state=30.54 MiB",
+      "evict_kv_drop_mib": 10.850000000000001
+    },
+    {
+      "document": "document_2_kv_cache_management",
+      "focus": 1,
+      "target": 9,
+      "question": "What does the cache store for each token?",
+      "tree": {
+        "nodes": 41,
+        "tokens": 1481,
+        "depth": 4,
+        "blocks": 11,
+        "min_subtree": 51,
+        "max_subtree": 1481,
+        "mean_subtree": 238.78571428571428,
+        "structural_types": [
+          "abstract",
+          "equation",
+          "section",
+          "subsection"
+        ],
+        "structural_nodes": 15,
+        "type_counts": {
+          "abstract": 1,
+          "document": 1,
+          "equation": 2,
+          "paragraph": 24,
+          "section": 9,
+          "subsection": 4
+        }
+      },
+      "markup_tokens": 77,
+      "markup_share": 0.05199189736664416,
+      "baseline_answer": "The cache stores the key-value pairs for each token, where the key is the token and the value is the corresponding value3.33.146.520 I main: mode=ask focus=1 decoded=24 state=47.36 MiB",
+      "baseline_wall_s": 213.93036079988815,
+      "baseline_log": {
+        "answers": [],
+        "kv_before_mib": 46.3,
+        "kv_after_mib": null,
+        "unchanged": null,
+        "cells_removed": null,
+        "prefill_s": 200.63,
+        "ask_s": null,
+        "current": "baseline"
+      },
+      "baseline_logits": [
+        [
+          578,
+          16.054258
+        ],
+        [
+          6636,
+          20.246998
+        ],
+        [
+          10756,
+          20.61055
+        ],
+        [
+          279,
+          18.751171
+        ],
+        [
+          1401,
+          16.834238
+        ],
+        [
+          19625,
+          19.705065
+        ],
+        [
+          13840,
+          20.751537
+        ],
+        [
+          369,
+          19.357784
+        ],
+        [
+          1855,
+          20.244024
+        ],
+        [
+          4037,
+          21.461355
+        ],
+        [
+          11,
+          18.939154
+        ],
+        [
+          1405,
+          20.048996
+        ],
+        [
+          279,
+          21.130415
+        ],
+        [
+          1401,
+          23.930401
+        ],
+        [
+          374,
+          21.792351
+        ],
+        [
+          279,
+          21.935036
+        ],
+        [
+          4037,
+          20.311058
+        ],
+        [
+          323,
+          20.575336
+        ],
+        [
+          279,
+          23.758249
+        ],
+        [
+          907,
+          25.466228
+        ],
+        [
+          374,
+          24.055016
+        ],
+        [
+          279,
+          21.791565
+        ],
+        [
+          12435,
+          18.512337
+        ],
+        [
+          907,
+          17.725641
+        ]
+      ],
+      "replace_wall_s": 175.07738210004754,
+      "replace_kv_before": 46.3,
+      "replace_kv_after": 39.26,
+      "replace_answer": "The cache stores the key-value pairs for each token, where the key is the token and the value is the corresponding value2.54.185.301 I main: unchanged = yes2.54.185.576 I main: mode=replace focus=1 decoded=24 state=40.61 MiB",
+      "replace": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_wall_s": 175.1847773999907,
+      "evict_cells_removed": 259,
+      "evict": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_kv_before": 46.3,
+      "evict_kv_after": 39.26,
+      "evict_answer": "The cache stores the key-value pairs for each token, where the key is the token and the value is the corresponding value2.54.509.218 I main: unchanged = yes2.54.509.446 I main: mode=evict focus=1 decoded=24 state=39.26 MiB",
+      "evict_kv_drop_mib": 7.039999999999999
+    },
+    {
+      "document": "document_3_mathematical_results",
+      "focus": 1,
+      "target": 4,
+      "question": "What does the paper illustrate?",
+      "tree": {
+        "nodes": 28,
+        "tokens": 842,
+        "depth": 4,
+        "blocks": 7,
+        "min_subtree": 54,
+        "max_subtree": 842,
+        "mean_subtree": 189.36363636363637,
+        "structural_types": [
+          "abstract",
+          "align",
+          "equation",
+          "section"
+        ],
+        "structural_nodes": 12,
+        "type_counts": {
+          "abstract": 1,
+          "align": 1,
+          "definition": 2,
+          "document": 1,
+          "equation": 6,
+          "lemma": 2,
+          "paragraph": 4,
+          "proof": 4,
+          "proposition": 1,
+          "section": 5,
+          "theorem": 1
+        }
+      },
+      "markup_tokens": 169,
+      "markup_share": 0.2007125890736342,
+      "baseline_answer": "The paper illustrates the hierarchy of definitions, lemmas, theorems, propositions, equations, and proofs. The results1.33.602.450 I main: mode=ask focus=1 decoded=24 state=27.29 MiB",
+      "baseline_wall_s": 94.4149254001677,
+      "baseline_log": {
+        "answers": [],
+        "kv_before_mib": 26.32,
+        "kv_after_mib": null,
+        "unchanged": null,
+        "cells_removed": null,
+        "prefill_s": 82.7,
+        "ask_s": null,
+        "current": "baseline"
+      },
+      "baseline_logits": [
+        [
+          578,
+          18.110218
+        ],
+        [
+          5684,
+          21.460007
+        ],
+        [
+          46480,
+          20.274576
+        ],
+        [
+          279,
+          21.458336
+        ],
+        [
+          30022,
+          21.541405
+        ],
+        [
+          315,
+          25.174973
+        ],
+        [
+          17931,
+          23.800922
+        ],
+        [
+          11,
+          22.783306
+        ],
+        [
+          514,
+          24.393335
+        ],
+        [
+          90636,
+          29.854261
+        ],
+        [
+          11,
+          24.334553
+        ],
+        [
+          279,
+          23.739555
+        ],
+        [
+          461,
+          29.139862
+        ],
+        [
+          1026,
+          30.974649
+        ],
+        [
+          11,
+          24.58283
+        ],
+        [
+          84373,
+          24.632629
+        ],
+        [
+          11,
+          24.641281
+        ],
+        [
+          39006,
+          25.591927
+        ],
+        [
+          11,
+          24.652903
+        ],
+        [
+          323,
+          26.170471
+        ],
+        [
+          78259,
+          24.034269
+        ],
+        [
+          13,
+          20.312229
+        ],
+        [
+          578,
+          20.400303
+        ],
+        [
+          3135,
+          23.427696
+        ]
+      ],
+      "replace_wall_s": 128.40726719982922,
+      "replace_kv_before": 26.32,
+      "replace_kv_after": 18.66,
+      "replace_answer": "The paper illustrates the hierarchy of definitions, lemmas, theorems, propositions, equations, and proofs. The results2.07.663.067 I main: unchanged = yes2.07.663.346 I main: mode=replace focus=1 decoded=24 state=20.01 MiB",
+      "replace": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_wall_s": 103.19967550016008,
+      "evict_cells_removed": 276,
+      "evict": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_kv_before": 26.32,
+      "evict_kv_after": 18.66,
+      "evict_answer": "The paper illustrates the hierarchy of definitions, lemmas, theorems, propositions, equations, and proofs. The results1.42.876.001 I main: unchanged = yes1.42.876.103 I main: mode=evict focus=1 decoded=24 state=18.66 MiB",
+      "evict_kv_drop_mib": 7.66
+    },
+    {
+      "document": "document_4_structured_documents",
+      "focus": 1,
+      "target": 9,
+      "question": "What do research papers contain?",
+      "tree": {
+        "nodes": 50,
+        "tokens": 1639,
+        "depth": 4,
+        "blocks": 14,
+        "min_subtree": 46,
+        "max_subtree": 1639,
+        "mean_subtree": 214.8235294117647,
+        "structural_types": [
+          "abstract",
+          "algorithm",
+          "algorithmic",
+          "equation",
+          "section",
+          "subsection"
+        ],
+        "structural_nodes": 20,
+        "type_counts": {
+          "abstract": 1,
+          "algorithm": 1,
+          "algorithmic": 1,
+          "document": 1,
+          "equation": 3,
+          "paragraph": 28,
+          "section": 12,
+          "subsection": 3
+        }
+      },
+      "markup_tokens": 39,
+      "markup_share": 0.023794996949359364,
+      "baseline_answer": "Research papers contain sections, paragraphs, equations, figures, and formal environments. Treating the entire source as a flat token3.15.783.639 I main: mode=ask focus=1 decoded=24 state=52.21 MiB",
+      "baseline_wall_s": 196.650447800057,
+      "baseline_log": {
+        "answers": [],
+        "kv_before_mib": 51.24,
+        "kv_after_mib": null,
+        "unchanged": null,
+        "cells_removed": null,
+        "prefill_s": 185.11,
+        "ask_s": null,
+        "current": "baseline"
+      },
+      "baseline_logits": [
+        [
+          8483,
+          15.973234
+        ],
+        [
+          16064,
+          25.343721
+        ],
+        [
+          6782,
+          22.736694
+        ],
+        [
+          14491,
+          19.79826
+        ],
+        [
+          11,
+          21.287863
+        ],
+        [
+          43743,
+          23.274279
+        ],
+        [
+          11,
+          23.924133
+        ],
+        [
+          39006,
+          23.556305
+        ],
+        [
+          11,
+          24.452652
+        ],
+        [
+          12678,
+          25.908319
+        ],
+        [
+          11,
+          24.130926
+        ],
+        [
+          323,
+          24.676018
+        ],
+        [
+          16287,
+          24.06814
+        ],
+        [
+          22484,
+          23.708412
+        ],
+        [
+          13,
+          21.603369
+        ],
+        [
+          12758,
+          20.008831
+        ],
+        [
+          1113,
+          28.127483
+        ],
+        [
+          279,
+          26.016563
+        ],
+        [
+          4553,
+          27.079941
+        ],
+        [
+          2592,
+          26.127628
+        ],
+        [
+          439,
+          25.998196
+        ],
+        [
+          264,
+          27.221331
+        ],
+        [
+          10269,
+          28.168945
+        ],
+        [
+          4037,
+          25.26483
+        ]
+      ],
+      "replace_wall_s": 222.91240599984303,
+      "replace_kv_before": 51.24,
+      "replace_kv_after": 43.74,
+      "replace_answer": "Research papers contain sections, paragraphs, equations, figures, and formal environments. Treating the entire source as a flat token3.42.052.349 I main: unchanged = yes3.42.052.953 I main: mode=replace focus=1 decoded=24 state=45.08 MiB",
+      "replace": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_wall_s": 207.33005929994397,
+      "evict_cells_removed": 271,
+      "evict": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_kv_before": 51.24,
+      "evict_kv_after": 43.74,
+      "evict_answer": "Research papers contain sections, paragraphs, equations, figures, and formal environments. Treating the entire source as a flat token3.26.403.467 I main: unchanged = yes3.26.404.055 I main: mode=evict focus=1 decoded=24 state=43.74 MiB",
+      "evict_kv_drop_mib": 7.5
+    },
+    {
+      "document": "document_5_attention_masks",
+      "focus": 1,
+      "target": 9,
+      "question": "What does an attention mask determine?",
+      "tree": {
+        "nodes": 51,
+        "tokens": 1729,
+        "depth": 4,
+        "blocks": 14,
+        "min_subtree": 21,
+        "max_subtree": 1729,
+        "mean_subtree": 216.7058823529412,
+        "structural_types": [
+          "abstract",
+          "cases",
+          "equation",
+          "section",
+          "subsection"
+        ],
+        "structural_nodes": 20,
+        "type_counts": {
+          "abstract": 1,
+          "cases": 2,
+          "document": 1,
+          "equation": 4,
+          "paragraph": 29,
+          "section": 12,
+          "subsection": 2
+        }
+      },
+      "markup_tokens": 94,
+      "markup_share": 0.05436668594563331,
+      "baseline_answer": "An attention mask is a binary mask that determines which tokens in a sequence are relevant to the attention mechanism. It is used3.55.308.399 I main: mode=ask focus=1 decoded=24 state=55.05 MiB",
+      "baseline_wall_s": 236.14176109991968,
+      "baseline_log": {
+        "answers": [],
+        "kv_before_mib": 54.05,
+        "kv_after_mib": null,
+        "unchanged": null,
+        "cells_removed": null,
+        "prefill_s": 224.62,
+        "ask_s": null,
+        "current": "baseline"
+      },
+      "baseline_logits": [
+        [
+          1556,
+          17.287466
+        ],
+        [
+          6666,
+          22.512695
+        ],
+        [
+          7056,
+          24.447136
+        ],
+        [
+          374,
+          19.812878
+        ],
+        [
+          264,
+          23.150925
+        ],
+        [
+          8026,
+          17.857775
+        ],
+        [
+          7056,
+          19.559143
+        ],
+        [
+          430,
+          20.226921
+        ],
+        [
+          27667,
+          18.522713
+        ],
+        [
+          902,
+          22.632345
+        ],
+        [
+          11460,
+          19.487703
+        ],
+        [
+          304,
+          21.405788
+        ],
+        [
+          264,
+          22.818657
+        ],
+        [
+          8668,
+          20.197071
+        ],
+        [
+          527,
+          20.779491
+        ],
+        [
+          9959,
+          17.781981
+        ],
+        [
+          311,
+          23.621193
+        ],
+        [
+          279,
+          20.772972
+        ],
+        [
+          6666,
+          19.416985
+        ],
+        [
+          17383,
+          18.128052
+        ],
+        [
+          13,
+          20.964121
+        ],
+        [
+          1102,
+          20.1824
+        ],
+        [
+          374,
+          20.546423
+        ],
+        [
+          1511,
+          21.783665
+        ]
+      ],
+      "replace_wall_s": 236.2544563000556,
+      "replace_kv_before": 54.05,
+      "replace_kv_after": 45.92,
+      "replace_answer": "An attention mask is a binary mask that determines which tokens in a sequence are relevant to the attention mechanism. It is used3.55.335.564 I main: unchanged = yes3.55.336.024 I main: mode=replace focus=1 decoded=24 state=47.27 MiB",
+      "replace": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_wall_s": 230.42487640003674,
+      "evict_cells_removed": 292,
+      "evict": {
+        "tokens_identical": true,
+        "logit_steps": 24,
+        "max_logit_shift": 0.0,
+        "equivalent": true
+      },
+      "evict_kv_before": 54.05,
+      "evict_kv_after": 45.92,
+      "evict_answer": "An attention mask is a binary mask that determines which tokens in a sequence are relevant to the attention mechanism. It is used3.49.528.079 I main: unchanged = yes3.49.528.706 I main: mode=evict focus=1 decoded=24 state=45.92 MiB",
+      "evict_kv_drop_mib": 8.129999999999995
+    }
+  ],
+  "positive_control": {
+    "document": "document_1_transformer_architecture",
+    "focus": 1,
+    "answer_changed": true,
+    "max_logit_shift": 9.891742
+  },
+  "logit_epsilon": 0.25
+}

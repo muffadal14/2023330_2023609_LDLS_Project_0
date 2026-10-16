@@ -1,0 +1,57 @@
+\documentclass{article}
+\title{A Synthetic Document With Real Cross-References}
+\author{Test Fixture}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This fixture exists to exercise the two code paths the five corpus documents
+never reach: cross-references between blocks, and the merge rule for very
+small blocks.\end{abstract}
+
+\section{Background}
+\label{sec:background}
+
+Autoregressive models factor a joint distribution over a token sequence into
+one conditional distribution per position. Each factor is evaluated from a
+fixed size window of previously generated tokens.
+
+\section{A Short Note}
+\label{sec:shortnote}
+
+This section is deliberately tiny.
+
+\section{Cache Layout}
+\label{sec:cache}
+
+A key-value cache stores, for every layer, one vector per position for keys and
+one for values. The layout follows the sequence structure; see
+Section~\ref{sec:background} for the generation model and
+Section~\ref{sec:shortnote} for the shortest block in this document.
+
+\section{Eviction}
+\label{sec:eviction}
+
+Removing a contiguous range of positions frees the cells that range occupied.
+The freed cells are reused by the next decode step.
+
+\begin{theorem}
+\label{thm:eviction}
+A contiguous position range owned by one sequence can be removed in a single
+operation.
+\end{theorem}
+
+\begin{proof}
+\label{proof:eviction}
+Every cell records which sequences it belongs to and what position it holds, so
+a removal is fully described by a sequence identifier and a position range.
+\end{proof}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Structured documents admit block-level eviction, which is the property this
+project measures.
+
+\end{document}

@@ -1,0 +1,108 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,algorithm,algpseudocode}
+\title{Tree-Based Representation of Structured Documents}
+\author{Sample Research Group}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Research papers contain sections, paragraphs, equations, figures, and formal environments. Treating the entire source as a flat token stream discards information about these relationships. This document defines a simple tree representation and describes how it can support selection of relevant document regions during language-model inference.
+\end{abstract}
+
+\section{Motivation}
+A question about a proof usually does not require every paragraph in a paper. A question about an experimental result may require the result section and a definition from an earlier section, but not the acknowledgments. A structural representation gives the system candidate units for retrieval and possible cache management.
+
+The aim is not to assume that physical proximity determines relevance. Rather, structure provides metadata that can be combined with the question and with explicit dependencies. The resulting system should retain every part needed to answer correctly.
+
+\section{Tree Model}
+Represent a document as a rooted tree $T=(V,E)$, where $V$ is a set of nodes and $E$ contains directed parent-child edges. Each node corresponds to a structural unit such as a section, subsection, paragraph, equation, theorem, or proof. The root represents the complete document.
+
+For each node $v\in V$, define metadata
+\begin{equation}
+m(v)=(\operatorname{id}_v,\operatorname{type}_v,
+\operatorname{parent}_v,\operatorname{tokens}_v).
+\end{equation}
+The identifier is unique within the document. The type names the LaTeX structure. The parent identifies the containing node, while the token list records the model-token representation of the node's content.
+
+\subsection{Tree Depth and Subtree Size}
+The depth of a node is the number of edges from the root to that node. The tree depth is the maximum node depth under the chosen convention. The subtree rooted at $v$ contains $v$ and every descendant of $v$.
+
+If each token belongs to exactly one node, the token count of a subtree is
+\begin{equation}
+S(v)=\sum_{u\in \operatorname{Desc}(v)\cup\{v\}}
+|\operatorname{tokens}_u|.
+\end{equation}
+A real implementation must specify whether a parent's token list includes only its own text or also its descendants. Counting both parent and child copies would double-count tokens.
+
+\section{Parsing LaTeX}
+A LaTeX parser should recognize commands such as \verb|\section| and \verb|\subsection|, as well as environments delimited by \verb|\begin{...}| and \verb|\end{...}|. Environments of interest include \texttt{abstract}, \texttt{equation}, \texttt{align}, \texttt{theorem}, and \texttt{proof}.
+
+Parsing by regular expressions alone can fail when environments are nested, braces contain commands, or comments include misleading delimiters. A syntax-aware library is preferable. The parser should retain the source text for each node so that tokenization can occur using the target model's tokenizer.
+
+\subsection{Small-Subtree Merging}
+A document may contain many tiny nodes, such as a short equation label or a one-word heading. If every tiny node is assigned its own inference sequence, the design may exceed sequence limits and introduce unnecessary overhead. A merging policy can combine small adjacent siblings when they share a parent and their boundaries are not semantically important.
+
+The policy should preserve theorem and proof boundaries, section membership, and any required dependency links. It should record which original nodes were merged so that later queries and statistics remain interpretable. The token threshold is a configurable experiment parameter rather than a universal constant.
+
+\section{Selection Algorithm}
+The following pseudocode describes a simple structural candidate-selection stage. It does not itself prove that a node is irrelevant; a question-specific policy must decide which nodes and dependencies are required.
+
+\begin{algorithm}
+\caption{Collect tokens for a selected subtree}
+\begin{algorithmic}[1]
+\Require Root node $v$, node map $G$
+\Ensure Ordered list of token records $R$
+\State $R\gets$ empty list
+\State Add the local tokens of $v$ to $R$
+\ForAll{children $u$ of $v$ in source order}
+  \State $R\gets R$ concatenated with the result for $u$
+\EndFor
+\State \Return $R$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Cross-References and Dependencies}
+A paper can contain references to a theorem or equation outside the current subtree. These relationships are not represented by the containment tree alone. The parser can record labels and references as additional edges in a dependency graph. A retrieval policy may then include referenced nodes when they are needed to interpret a selected proof or paragraph.
+
+\section{Evaluation Measures}
+Useful structural statistics include total nodes, maximum depth, subtree token-count distribution, and the fraction of tokens classified as markup or syntax. The syntax classification must be stated explicitly because LaTeX commands can carry meaningful content: a heading command is structural, but its title is meaningful text.
+
+The inference experiment should also measure prefill latency, generation latency, eviction latency, and active KV-cache usage. These measurements connect the parser's structural representation to the runtime behavior of the language model.
+
+\section{Conclusion}
+A tree provides a practical index over document structure. It supports subtree-level selection and reporting, while separate dependency information helps prevent unsafe removal of needed context. The approach should be evaluated empirically rather than assuming that tree boundaries automatically match attention boundaries.
+
+
+\section{Schema Design}
+A shared JSON schema should make parser outputs predictable across all sample documents. Each node needs a stable identifier, a node type, a parent identifier, and its token records. A document-level field can identify the source file and schema version. Optional fields may store labels, source spans, environment names, or references, but the required fields should have consistent meanings across parsers.
+
+One possible conceptual record is
+\begin{equation}
+v=(\operatorname{id},\operatorname{parent},\operatorname{type},
+\operatorname{tokens},\operatorname{positions},\operatorname{seq\_ids}).
+\end{equation}
+The tuple is a description of metadata rather than a mandated serialization format. The implementation team must decide whether token arrays are stored inside each node or flattened into one document-level table. If the arrays are node-local, their lengths and indexing rules should be clear.
+
+\subsection{Validation Rules}
+Every non-root parent identifier should refer to an existing node. Parent links should not contain cycles, and source order should be preserved for sibling nodes. The token, position, and sequence arrays must agree in length if they are parallel arrays. Token IDs must come from the selected model tokenizer, not from character offsets or hand-written estimates.
+
+Position conventions should be explicit. If each logical sequence starts at position zero, different sequences can reuse the same position values. If positions are global across a batch, the driver must still maintain the mapping expected by the inference library. The parser and driver should not silently use different conventions.
+
+\section{Merge Policy}
+Tiny subtrees can create overhead if each one becomes an independent sequence. A merge policy may combine adjacent sibling nodes below a chosen token threshold, provided that the merged unit retains enough metadata to reconstruct its original members. The policy should not merge a proof with an unrelated section simply because both are short. It should also preserve source order and important environment boundaries.
+
+A merge rule can be expressed as a sequence of decisions: inspect a node's type and token count, determine whether it is eligible, check whether a compatible sibling exists, merge only when the combined size remains within a configured limit, and record the original node identifiers. The team should report the threshold used and compare the node count before and after merging.
+
+\section{Parser Test Strategy}
+Unit tests should cover ordinary sections, nested subsections, equation environments, theorem and proof environments, comments, labels, and references. For each sample, compare the parser's node tree with a small expected structure. Test that every node has a valid parent, that each token is assigned once under the selected ownership convention, and that the reconstructed source order is sensible.
+
+A useful integration test parses a document, serializes it to JSON, loads that JSON in the C++ driver, and checks that node identifiers and token counts survive the round trip. Errors should be reported with the source file and node identifier so that a parser failure can be distinguished from a model-inference failure.
+
+\section{Statistics}
+For a tree with $N$ nodes, count the number of nodes at each depth and calculate the maximum depth. For every node, calculate subtree token count under the agreed ownership convention. Summarize the distribution using minimum, median, maximum, and optionally quartiles. For syntax share, define a reproducible classification of tokens associated with commands, delimiters, and formatting syntax. Since commands such as \verb|\section| introduce meaningful titles, the title text should not automatically be counted as syntax.
+
+\section{Conclusion}
+A stable schema is the interface between independent parser work and the shared inference driver. Validation and explicit merge rules reduce integration problems. The resulting statistics help explain whether a domain naturally produces large meaningful subtrees or many small structural nodes.
+
+\end{document}

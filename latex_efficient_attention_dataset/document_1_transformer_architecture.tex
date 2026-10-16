@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,booktabs}
+\title{Transformer Architecture and Self-Attention}
+\author{Sample Research Group}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Transformers represent sequences by repeatedly combining token-level information through attention and position-wise transformations. This document introduces the main architectural components, defines scaled dot-product attention, and discusses the computational costs that motivate efficient-attention research. Its sections, equations, and explanatory paragraphs provide distinct structural units for a LaTeX parser.
+\end{abstract}
+
+\section{Introduction}
+Sequence models must use context to interpret each token. In a sentence, a pronoun may refer to a noun several words earlier, while a technical term may depend on a definition introduced in a previous paragraph. Recurrent networks process tokens sequentially, whereas a Transformer can compute interactions among many positions in parallel during training.
+
+The Transformer architecture uses attention to construct contextual representations. Rather than assigning each token a fixed summary of its past, attention calculates a weighted combination of representations from permitted positions. The weights depend on the current input, so different tokens can retrieve different information from the same sequence.
+
+\section{Model Architecture}
+A typical Transformer contains an embedding layer, a stack of repeated blocks, and an output projection. Each block includes a multi-head attention module and a feed-forward network. Residual connections and normalization help stabilize optimization. Positional information is also required because attention by itself does not encode the order of a sequence.
+
+Let $X\in\mathbb{R}^{n\times d}$ denote the input representation of a sequence of length $n$ and hidden width $d$. Learned matrices project the input into queries, keys, and values:
+\begin{align}
+Q &= XW_Q,\\
+K &= XW_K,\\
+V &= XW_V.
+\end{align}
+The query expresses what a position seeks, the key describes information that may be matched, and the value contains the information combined at the output.
+
+\subsection{Scaled Dot-Product Attention}
+The attention operation is
+\begin{equation}
+\operatorname{Attention}(Q,K,V)
+=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)V,
+\end{equation}
+where $d_k$ is the key dimension and $M$ is an optional mask. Dividing by $\sqrt{d_k}$ controls the scale of dot products. The softmax is applied across permitted key positions for each query.
+
+The mask $M$ represents restrictions on information flow. In causal language modeling, a token cannot attend to future tokens. In a batch containing independent sequences, tokens from one sequence should not accidentally attend to tokens belonging to another sequence. Implementations may encode these constraints using explicit masks, sequence metadata, or equivalent internal mechanisms.
+
+\subsection{Multi-Head Attention}
+Multi-head attention uses several projections in parallel. If there are $h$ heads, each head can learn a different interaction pattern. The head outputs are concatenated and projected:
+\begin{equation}
+\operatorname{MHA}(X)=
+\operatorname{Concat}(H_1,\ldots,H_h)W_O.
+\end{equation}
+Different heads may focus on local syntax, long-range references, or other statistical relationships. This interpretation is useful but should not be treated as a guarantee that each head has one simple role.
+
+\section{Computational Cost}
+For a dense attention layer, forming the score matrix requires approximately $O(n^2d)$ arithmetic operations and $O(n^2)$ score storage when the full matrix is materialized. The quadratic term becomes expensive as context length grows. Optimized kernels can reduce intermediate storage, but the attention computation still needs to respect the intended visibility rules.
+
+During autoregressive generation, key and value tensors from earlier positions are often cached. This avoids recomputing their projections at every generated token. The cache size grows with sequence length, layer count, and the dimensions and precision of the stored tensors.
+
+\section{Implications for Structured Documents}
+A research paper is not merely a flat sequence. Headings introduce sections; sections contain paragraphs, equations, figures, and proofs. A parser can represent this organization as a tree and attach each token to a structural node. Questions about one section may not require every unrelated section to remain in the active context.
+
+However, document hierarchy does not automatically create safe attention boundaries. A paragraph may refer to a definition elsewhere, and a proof may rely on a lemma in another section. A system should preserve such dependencies or explicitly include the referenced material before evicting unrelated state.
+
+\section{Conclusion}
+Transformers combine information through learned attention weights, while masks constrain which positions may interact. Their computational and cache costs motivate selective context management. A structured representation offers a way to identify candidate units for retention or eviction, provided that the implementation preserves the model's required dependencies.
+
+
+\section{Training and Inference}
+During training, a causal language model usually receives a sequence whose target tokens are shifted relative to its input tokens. At each position, the model produces scores for possible next tokens. A loss function compares those scores with the expected targets, and gradient-based optimization updates the model parameters. The causal mask ensures that a position cannot use the target token that it is supposed to predict.
+
+Inference differs from training because the model repeatedly extends a prefix. Once the prompt has been processed, generation can often proceed by evaluating only the newest token while reusing cached keys and values. The model's output distribution is converted into a next-token choice using a decoding method. Greedy decoding chooses the highest-scoring token, whereas sampling methods introduce controlled randomness.
+
+\subsection{Residual Connections and Normalization}
+A Transformer block commonly adds the output of a sublayer to its input. A simplified residual operation can be written as
+\begin{equation}
+Y=X+F(X),
+\end{equation}
+where $F$ denotes an attention or feed-forward transformation. Normalization is applied according to the architecture's design. Residual paths help information and gradients move through deep networks, while normalization can improve optimization stability. Exact ordering varies across model families, so an implementation should follow the architecture used by its checkpoint.
+
+\section{Why Structure Matters}
+A model prompt may include explanatory prose, headings, code, equations, and markup. The same number of tokens can represent very different amounts of useful content. HTML tags or LaTeX commands may occupy tokens without directly answering a question, while a short equation or theorem may contain the key fact. A structured parser can distinguish the container from its textual payload and compute statistics for each node type.
+
+For the experiment, each node should retain a stable identifier and its source order. Token positions must be assigned consistently with the sequence convention used by the driver. If a question targets one subsection, the system should identify that subsection and any dependencies needed to interpret it. It should not assume that all nodes outside the selected subtree are irrelevant without testing that assumption.
+
+\section{Limitations}
+A tree representation is an index, not a new attention algorithm by itself. Runtime behavior depends on the inference engine's sequence semantics, cache operations, and visibility rules. A design that assigns unrelated sequence identifiers to every paragraph may isolate the paragraphs so strongly that the model cannot combine the information needed to answer a question. Experiments should therefore test correctness before drawing conclusions about efficiency.
+
+\end{document}

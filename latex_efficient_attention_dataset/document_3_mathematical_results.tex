@@ -1,0 +1,138 @@
+\documentclass{article}
+\usepackage{amsmath,amsthm,amssymb}
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{proposition}[definition]{Proposition}
+
+\title{Definitions, Lemmas, and Proofs: A Small Mathematical Study}
+\author{Sample Research Group}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper illustrates the hierarchy of definitions, lemmas, theorems,
+propositions, equations, and proofs. The results concern convergence of
+real sequences and provide a test case for parsers that identify formal
+environments and preserve structural relationships.
+\end{abstract}
+
+\section{Preliminaries}
+
+Mathematical writing uses named environments to distinguish statements
+from their justifications. A definition introduces terminology, a lemma
+establishes an auxiliary result, and a theorem presents a result of
+primary interest. A proof explains why a statement follows from
+assumptions and previously established facts.
+
+\begin{definition}
+A sequence $(x_n)_{n\geq 1}$ of real numbers converges to
+$L\in\mathbb{R}$ if, for every $\varepsilon>0$, there exists an integer
+$N$ such that
+\begin{equation}
+n\geq N \implies |x_n-L|<\varepsilon.
+\end{equation}
+We write $x_n\to L$ as $n\to\infty$.
+\end{definition}
+
+\begin{definition}
+A sequence $(x_n)$ is constant if there is a real number $c$ such that
+$x_n=c$ for every positive integer $n$.
+\end{definition}
+
+\section{Elementary Lemmas}
+
+\begin{lemma}
+Every constant real sequence converges to its constant value.
+\end{lemma}
+
+\begin{proof}
+Let $x_n=c$ for all $n$. Choose any $\varepsilon>0$ and set $N=1$.
+For every $n\geq N$,
+\[
+|x_n-c|=|c-c|=0<\varepsilon.
+\]
+Thus the definition of convergence is satisfied, and $x_n\to c$.
+\end{proof}
+
+\begin{lemma}
+If a sequence converges to $L$, then it is bounded.
+\end{lemma}
+
+\begin{proof}
+Since $x_n\to L$, choose $N$ so that $n\geq N$ implies
+$|x_n-L|<1$. By the triangle inequality,
+\[
+|x_n|\leq |x_n-L|+|L|<1+|L|
+\]
+for all $n\geq N$. The finite set of initial values
+$x_1,\ldots,x_{N-1}$ has a finite maximum absolute value. Taking the
+larger of that value and $1+|L|$ gives a bound for the whole sequence.
+\end{proof}
+
+\section{A Limit Rule}
+
+\begin{theorem}
+If $x_n\to a$ and $y_n\to b$, then $x_n+y_n\to a+b$.
+\end{theorem}
+
+\begin{proof}
+Let $\varepsilon>0$. Convergence of $x_n$ gives an integer $N_1$ such
+that
+\[
+n\geq N_1\implies |x_n-a|<\varepsilon/2.
+\]
+Convergence of $y_n$ gives an integer $N_2$ such that
+\[
+n\geq N_2\implies |y_n-b|<\varepsilon/2.
+\]
+Let $N=\max(N_1,N_2)$. For $n\geq N$, the triangle inequality yields
+\begin{align}
+|(x_n+y_n)-(a+b)|
+&=|(x_n-a)+(y_n-b)|\\
+&\leq |x_n-a|+|y_n-b|\\
+&<\varepsilon.
+\end{align}
+Therefore, $x_n+y_n$ converges to $a+b$.
+\end{proof}
+
+\begin{proposition}
+If $x_n\to a$ and $c$ is a fixed real number, then $cx_n\to ca$.
+\end{proposition}
+
+\begin{proof}
+If $c=0$, the sequence $cx_n$ is identically zero and the result is
+immediate. If $c\ne 0$, let $\varepsilon>0$. Choose $N$ so that
+$n\geq N$ implies $|x_n-a|<\varepsilon/|c|$. Then
+\[
+|cx_n-ca|=|c||x_n-a|<\varepsilon.
+\]
+This proves the proposition.
+\end{proof}
+
+\section{Structural Dependencies}
+
+The proof of the sum theorem uses the definition of convergence and the
+triangle inequality. The proposition uses the definition again, while
+the boundedness lemma is an auxiliary result that is not needed for the
+sum theorem. A document-processing system should not assume that every
+earlier statement is a dependency merely because it appears earlier.
+
+LaTeX source order also differs from semantic dependency. A command such
+as \verb|\ref{lem:bounded}| can link a statement to another environment,
+while nested environments and equations create containment relationships.
+A robust parser should preserve environment boundaries and extract
+reference links separately from parent-child structure.
+
+\section{Conclusion}
+
+Formal mathematical documents contain useful structural boundaries.
+Definitions, lemmas, theorems, and proofs can be represented as nodes,
+but a tree alone does not capture every logical dependency. This makes
+mathematical text a useful test domain for structured retrieval and
+selective cache management.
+
+\end{document}

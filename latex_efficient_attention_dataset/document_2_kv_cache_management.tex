@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,booktabs}
+\title{Key-Value Cache Management in Autoregressive Language Models}
+\author{Sample Research Group}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Autoregressive language models generate a sequence one token at a time. Reusing keys and values computed for earlier tokens reduces repeated work, but the resulting key-value cache can consume substantial memory. This document describes the cache, estimates its storage requirements, and outlines considerations for selective eviction.
+\end{abstract}
+
+\section{Introduction}
+Given a prompt, an autoregressive model predicts a distribution over the next token. After a token is selected, it is appended to the context and the model predicts again. A naive implementation might recompute representations for the entire prefix at each step. Most inference systems instead reuse intermediate attention state from previous positions.
+
+The key-value cache is especially important in decoder-only Transformers. At each layer, the model computes keys and values for newly processed tokens and stores them for later attention operations. The query for the next token can then attend to cached keys and combine the corresponding values.
+
+\section{Cache Representation}
+Let $L$ be the number of layers and let $K_t^\ell$ and $V_t^\ell$ denote the key and value tensors for token position $t$ at layer $\ell$. After processing $n$ tokens, the conceptual cache is
+\begin{equation}
+\mathcal{C}_n =
+\left\{(K_t^\ell,V_t^\ell):
+1\leq t\leq n,\ 1\leq \ell\leq L\right\}.
+\end{equation}
+The exact tensor layout depends on the model architecture and inference implementation. For grouped-query attention, for example, the number of key-value heads can be smaller than the number of query heads.
+
+\subsection{Memory Estimate}
+Suppose each token requires $m$ bytes of key and value storage per layer. An approximate cache size is
+\begin{equation}
+M(n)=Lnm.
+\end{equation}
+This simplified estimate excludes allocator overhead, alignment, temporary buffers, and other context state. It illustrates the linear relationship between cached token count and memory when the layer configuration and cache precision remain fixed.
+
+If a context has many tokens that are irrelevant to a particular query, it is tempting to remove their cache entries. Yet memory use must be described carefully: an implementation may free logical cache cells while retaining the underlying allocated buffer. Active occupancy and reserved capacity are therefore different measurements.
+
+\section{Structured Cache Ownership}
+For structured documents, a parser can assign each node a stable identifier and record the token positions and sequence identifiers associated with it. A node might represent a section, subsection, theorem, proof, or paragraph. The driver can then maintain a mapping from a structural node to the cached entries that it owns.
+
+A useful metadata record includes the node identifier, parent identifier, node type, token count, sequence identifier, and position range. If different sequences reuse the same position numbers, a position range alone is not sufficient to identify a unique set of cache entries. Sequence membership must be tracked as well.
+
+\subsection{Eviction Preconditions}
+Before removing a subtree, the system should check whether retained nodes depend on its contents. A theorem proof may use a lemma from another section; a paragraph may define a symbol used later. A simple tree captures containment, but cross-references form additional dependencies that may need their own representation.
+
+Eviction is safe for a target question only if removing the selected state cannot affect the computation that determines the answer, or if all required information is restored through another valid mechanism. This condition is stronger than merely labeling a subtree as unrelated based on its location.
+
+\section{Eviction Procedure}
+A prototype can select a subtree, collect its associated sequence and position information, call the cache-removal operation supported by the chosen inference library, and update its metadata. The procedure should then verify that retained sequences remain valid and that the selected entries are no longer active.
+
+The experiment should record cache occupancy before and after removal. If the library exposes allocated capacity separately, that value should also be recorded. The expected outcome is a reduction in active cached state; a reduction in process resident memory should not be claimed unless it is measured.
+
+\section{Evaluation}
+A controlled evaluation uses the same model, prompt, question, and decoding settings before and after eviction. It records answer text, prefill time, generation time, eviction time, and cache measurements. Repeated runs help reveal timing variation caused by operating-system scheduling and CPU load.
+
+A useful baseline compares two prompts run independently with the same prompts processed in a batch. Differences may arise from tokenization, positions, sampling, or sequence handling, so the experiment should keep these conditions fixed and investigate discrepancies.
+
+\section{Conclusion}
+The key-value cache trades memory for reduced repeated computation. Structural metadata can help identify candidate cache entries, but correct eviction requires precise sequence bookkeeping and preservation of dependencies. Reporting active cache usage separately from allocated capacity produces a more accurate account of memory effects.
+
+
+\section{Cache Layout and Sequence Metadata}
+An inference context may store cache cells in a layout that differs from the logical order of tokens in a document. A logical position is not necessarily a direct byte offset into memory. Some implementations manage cells through sequence membership, position values, and internal allocation structures. Consequently, a driver should use documented cache APIs instead of attempting to erase a guessed memory range.
+
+For each parsed node, the application can store a list of token records containing the model token ID, sequence identifier, and position. It can also retain a reverse map from a sequence and position pair to the node that owns that token. This reverse map makes it possible to select the intended entries during an eviction test. When positions overlap across sequences, the sequence identifier is necessary to disambiguate them.
+
+\subsection{Updating the Application State}
+After eviction, the driver must update its bookkeeping so that removed entries are not treated as present. It should also check whether the remaining sequence can continue generation under the runtime's rules. Some cache APIs remove entries from a sequence over a position interval; others may support copying, shifting, or clearing sequence state. The exact behavior should be verified against the version used by the project.
+
+\section{A Controlled Eviction Experiment}
+A useful experiment begins with a small document containing two clearly separated facts. Subtree A contains the fact required by a question, and subtree B contains unrelated material. The driver prefills the document and records the baseline answer. It then evicts B and asks the same question while keeping the relevant input and decoding settings unchanged.
+
+A second run changes B before prefill, rather than evicting B afterward. These are different interventions. Mutation tests whether altered unrelated content affects the answer; eviction tests whether removing cached state preserves the answer. Both should be performed because one result does not establish the other.
+
+\subsection{Correctness and Performance Metrics}
+Correctness metrics can include exact answer equality, normalized answer equality, and whether a known expected fact is present. Exact text can differ for reasons unrelated to the cache, so the team should define the comparison rule before running tests. For deterministic short factual questions, exact equality is a useful first check.
+
+Performance measurements should include prefill duration, generation duration, and eviction duration. Report the number of input tokens, generated tokens, CPU model, thread count, and whether the model was already loaded. For memory, distinguish active cache entries from reserved capacity and total process memory. Run each condition more than once and avoid comparing measurements taken under very different system loads.
+
+\section{Failure Modes}
+Common errors include evicting a position interval from the wrong sequence, reusing stale node metadata, changing the question between runs, and assuming that a cache clear releases the same amount of resident memory. Another error is removing a node that is structurally unrelated but semantically required by a cross-reference. Each failure should be recorded with a minimal reproducible test.
+
+\end{document}
